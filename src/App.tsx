@@ -66,7 +66,7 @@ const Example: React.FC = () => {
 
   console.log({ data });
   return (
-    <Box style={{ width: 500, margin: "0 auto" }}>
+    <Box style={{ maxWidth: 600, margin: "0 auto" }}>
       <Typography variant="h3">
         Day {day}. Cash: {data.cash}
       </Typography>
