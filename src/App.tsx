@@ -3,8 +3,11 @@ import {
   Box,
   Divider,
   IconButton,
+  InputLabel,
   LinearProgress,
+  MenuItem,
   Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -12,6 +15,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  FormControl,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "react-query";
@@ -43,6 +47,7 @@ export interface Data {
 
 const Example: React.FC = () => {
   const [day, setDay] = useState<number>(0);
+  const [trendsSince, setTrendsSince] = useState<number>(50);
 
   const { isLoading, error, data } = useQuery("repoData", () =>
     fetch("https://littfield-team7-dumpster.herokuapp.com/api/status").then(
@@ -64,6 +69,8 @@ const Example: React.FC = () => {
 
   if (!data) return null;
 
+  const possibleTrendsSince = Array.from(new Array(day));
+
   console.log({ data });
   return (
     <Box style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -71,16 +78,33 @@ const Example: React.FC = () => {
         Day {day}. Cash: {data.cash}
       </Typography>
 
-      <Box>
-        <IconButton disabled={day === 1} onClick={() => setDay((x) => x - 1)}>
-          <ChevronLeft />
-        </IconButton>
-        <IconButton
-          disabled={day === data.day - 1}
-          onClick={() => setDay((x) => x + 1)}
-        >
-          <ChevronRight />
-        </IconButton>
+      <Box display="flex" justifyContent="space-between">
+        <div style={{ flex: 1 }}>
+          <IconButton disabled={day === 1} onClick={() => setDay((x) => x - 1)}>
+            <ChevronLeft />
+          </IconButton>
+          <IconButton
+            disabled={day === data.day - 1}
+            onClick={() => setDay((x) => x + 1)}
+          >
+            <ChevronRight />
+          </IconButton>
+        </div>
+
+        <FormControl sx={{ m: 1, minWidth: 120 }} size="small">
+          <InputLabel>Trend After Day</InputLabel>
+          <Select
+            label={"Trends Days"}
+            value={trendsSince}
+            onChange={(e) => setTrendsSince(Number(e.target.value))}
+          >
+            {possibleTrendsSince.map((e, i) => (
+              <MenuItem value={i} key={i}>
+                {i}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
       <TableContainer component={Paper}>
@@ -90,7 +114,7 @@ const Example: React.FC = () => {
               <TableCell>Name</TableCell>
               <TableCell>Value</TableCell>
               <TableCell>Day Before</TableCell>
-              <TableCell>Trend since Day 50</TableCell>
+              <TableCell>Trend since Day {trendsSince}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -127,17 +151,26 @@ const Example: React.FC = () => {
               <TableCell>Day Leadtime</TableCell>
               <TableCell>{data.JOBT[day]}</TableCell>
               <TableCell>{data.JOBT[day - 1]}</TableCell>
+              <TableCell>
+                <Trend data={data.JOBT.filter((e, i) => i > trendsSince)} />
+              </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>In INV</TableCell>
               <TableCell>{data.INV[day]}</TableCell>
               <TableCell>{data.INV[day - 1]}</TableCell>
+              <TableCell>
+                <Trend data={data.INV.filter((e, i) => i > trendsSince)} />
+              </TableCell>
             </TableRow>
 
             <TableRow>
               <TableCell>Jobs Completed</TableCell>
               <TableCell>{data.JOBOUT[day]}</TableCell>
               <TableCell>{data.JOBOUT[day - 1]}</TableCell>
+              <TableCell>
+                <Trend data={data.JOBOUT.filter((e, i) => i > trendsSince)} />
+              </TableCell>
             </TableRow>
             <TableRow>
               <TableCell colSpan={3}>
@@ -163,7 +196,9 @@ const Example: React.FC = () => {
                   <TableCell>{v[day - 1]}</TableCell>
                   <TableCell>
                     <Trend
-                      data={(v as Array<number>).filter((e, i) => i < 50)}
+                      data={(v as Array<number>).filter(
+                        (e, i) => i > trendsSince
+                      )}
                     />
                   </TableCell>
                 </TableRow>
