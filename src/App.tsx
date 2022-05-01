@@ -81,6 +81,14 @@ const Example: React.FC = () => {
 
   const possibleTrendsSince = Array.from(new Array(day));
 
+  const totalSystemTrend = Array.from(new Array(data.day)).map((e, i) => {
+    return data.JOBIN[i] + data.S1Q[i] + data.S2Q[i] + data.S3Q[i];
+  });
+
+  const revenueTrend = Array.from(new Array(data.day)).map((e, i) => {
+    return data.JOBOUT[i] * data.JOBREV[i];
+  });
+
   console.log({ data });
   return (
     <Box style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -146,6 +154,12 @@ const Example: React.FC = () => {
                     data.S3Q[day - 1]
                 )}
               </TableCell>
+
+              <TableCell>
+                <Trend
+                  data={totalSystemTrend.filter((e, i) => i > trendsSince)}
+                />
+              </TableCell>
             </TableRow>
 
             <TableRow>
@@ -155,6 +169,9 @@ const Example: React.FC = () => {
               </TableCell>
               <TableCell>
                 {Number(data.JOBOUT[day - 1]) * Number(data.JOBREV[day - 1])}
+              </TableCell>
+              <TableCell>
+                <Trend data={revenueTrend.filter((e, i) => i > trendsSince)} />
               </TableCell>
             </TableRow>
             <TableRow>
@@ -173,7 +190,6 @@ const Example: React.FC = () => {
                 <Trend data={data.INV.filter((e, i) => i > trendsSince)} />
               </TableCell>
             </TableRow>
-
             <TableRow>
               <TableCell>Jobs Completed</TableCell>
               <TableCell>{data.JOBOUT[day]}</TableCell>
@@ -196,7 +212,6 @@ const Example: React.FC = () => {
                 <Divider />
               </TableCell>
             </TableRow>
-
             {Object.entries(data)
               .filter(([k, v]) => Array.isArray(v))
               .map(([k, v]) => (
