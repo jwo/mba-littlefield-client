@@ -16,6 +16,8 @@ import {
   TableRow,
   Typography,
   FormControl,
+  Card,
+  CardContent,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "react-query";
@@ -60,7 +62,15 @@ const Example: React.FC = () => {
     }
   }, [data]);
 
-  if (isLoading) return <LinearProgress />;
+  if (isLoading)
+    return (
+      <Card>
+        <CardContent>
+          <LinearProgress />
+          <Typography>Loading the dumpster</Typography>
+        </CardContent>
+      </Card>
+    );
 
   if (error)
     return (
