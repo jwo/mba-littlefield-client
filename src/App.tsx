@@ -1,4 +1,8 @@
-import { ChevronLeft, ChevronRight } from "@mui/icons-material";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ListAltOutlined,
+} from "@mui/icons-material";
 import {
   Box,
   Divider,
@@ -18,10 +22,12 @@ import {
   FormControl,
   Card,
   CardContent,
+  DialogContent,
+  Dialog,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "react-query";
-import Trend from "react-trend";
+import RawTrend from "react-trend";
 
 const queryClient = new QueryClient();
 
@@ -50,15 +56,16 @@ export interface Data {
 const Example: React.FC = () => {
   const [day, setDay] = useState<number>(0);
   const [trendsSince, setTrendsSince] = useState<number>(50);
+  const [popupData, handlePopup] = useState<Array<number> | undefined>();
 
   const { isLoading, error, data } = useQuery("repoData", () =>
-    fetch("https://littfield-team7-dumpster.herokuapp.com/api/status").then(
+    fetch(process.env.REACT_APP_URL || "").then(
       (res) => res.json() as Promise<Data>
     )
   );
   useEffect(() => {
     if (data) {
-      setDay(data.day - 1);
+      setDay(data.day);
     }
   }, [data]);
 
@@ -81,17 +88,62 @@ const Example: React.FC = () => {
 
   const possibleTrendsSince = Array.from(new Array(day));
 
+  const dataForDay = (attribute: keyof typeof data, day: number) => {
+    return Math.round((data[attribute] as Array<number>)[day - 1]);
+  };
+
+  const systemTrendForDay = (i: number) => {
+    return (
+      dataForDay("JOBIN", i) +
+      dataForDay("S1Q", i) +
+      dataForDay("S2Q", i) +
+      dataForDay("S3Q", i)
+    );
+  };
   const totalSystemTrend = Array.from(new Array(data.day)).map((e, i) => {
-    return data.JOBIN[i] + data.S1Q[i] + data.S2Q[i] + data.S3Q[i];
+    return systemTrendForDay(i);
   });
 
-  const revenueTrend = Array.from(new Array(data.day)).map((e, i) => {
-    return data.JOBOUT[i] * data.JOBREV[i];
+  const dayRevenue = (i: number) => {
+    return dataForDay("JOBOUT", i) * dataForDay("JOBREV", i);
+  };
+
+  const revenueTrend = possibleTrendsSince.map((e, i) => {
+    return dayRevenue(i + 1);
   });
+
+  const Trend: React.FC<{ data: Array<number> }> = ({ data }) => {
+    const d = data.map((r) => {
+      if (Number.isNaN(r)) return 0;
+      return Number(r);
+    });
+
+    return <RawTrend data={d} />;
+  };
 
   console.log({ data });
   return (
     <Box style={{ maxWidth: 600, margin: "0 auto" }}>
+      <Dialog open={Boolean(popupData)} onClose={() => handlePopup(undefined)}>
+        <DialogContent>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Day</TableCell>
+                <TableCell>Value</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(popupData || []).map((v, i) => (
+                <TableRow key={i}>
+                  <TableCell>{i + 2 + trendsSince}</TableCell>
+                  <TableCell>{v}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
       <Typography variant="h3">
         Day {day}. Cash: {data.cash}
       </Typography>
@@ -102,7 +154,7 @@ const Example: React.FC = () => {
             <ChevronLeft />
           </IconButton>
           <IconButton
-            disabled={day === data.day - 1}
+            disabled={day >= data.day}
             onClick={() => setDay((x) => x + 1)}
           >
             <ChevronRight />
@@ -130,72 +182,77 @@ const Example: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
-              <TableCell>Value</TableCell>
-              <TableCell>Day Before</TableCell>
+              <TableCell>Day {day}</TableCell>
+              <TableCell>Day {day - 1}</TableCell>
               <TableCell>Trend since Day {trendsSince}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <TableRow>
               <TableCell>Total in system (Job IN and queues)</TableCell>
-              <TableCell>
-                {Math.floor(
-                  data.JOBIN[day] +
-                    data.S1Q[day] +
-                    data.S2Q[day] +
-                    data.S3Q[day]
-                )}
-              </TableCell>
-              <TableCell>
-                {Math.round(
-                  data.JOBIN[day - 1] +
-                    data.S1Q[day - 1] +
-                    data.S2Q[day - 1] +
-                    data.S3Q[day - 1]
-                )}
-              </TableCell>
+              <TableCell>{systemTrendForDay(day)}</TableCell>
+              <TableCell>{systemTrendForDay(day - 1)}</TableCell>
 
               <TableCell>
-                <Trend
-                  data={totalSystemTrend.filter((e, i) => i > trendsSince)}
-                />
+                <Trend data={totalSystemTrend} />
+              </TableCell>
+              <TableCell>
+                <IconButton onClick={() => handlePopup(totalSystemTrend)}>
+                  <ListAltOutlined />
+                </IconButton>
               </TableCell>
             </TableRow>
 
             <TableRow>
               <TableCell>Day Revenue</TableCell>
+              <TableCell>{dayRevenue(day)}</TableCell>
+              <TableCell>{dayRevenue(day - 1)}</TableCell>
               <TableCell>
-                {Number(data.JOBOUT[day]) * Number(data.JOBREV[day])}
+                <Trend data={revenueTrend} />
               </TableCell>
               <TableCell>
-                {Number(data.JOBOUT[day - 1]) * Number(data.JOBREV[day - 1])}
-              </TableCell>
-              <TableCell>
-                <Trend data={revenueTrend.filter((e, i) => i > trendsSince)} />
+                <IconButton onClick={() => handlePopup(revenueTrend)}>
+                  <ListAltOutlined />
+                </IconButton>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Day Leadtime</TableCell>
-              <TableCell>{data.JOBT[day]}</TableCell>
-              <TableCell>{data.JOBT[day - 1]}</TableCell>
+              <TableCell>{dataForDay("JOBT", day)}</TableCell>
+              <TableCell>{dataForDay("JOBT", day - 1)}</TableCell>
               <TableCell>
-                <Trend data={data.JOBT.filter((e, i) => i > trendsSince)} />
+                <Trend data={data.JOBT} />
+              </TableCell>
+              <TableCell>
+                <IconButton onClick={() => handlePopup(data.JOBT)}>
+                  <ListAltOutlined />
+                </IconButton>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>In INV</TableCell>
-              <TableCell>{data.INV[day]}</TableCell>
-              <TableCell>{data.INV[day - 1]}</TableCell>
+              <TableCell>{dataForDay("INV", day)}</TableCell>
+              <TableCell>{dataForDay("INV", day - 1)}</TableCell>
               <TableCell>
-                <Trend data={data.INV.filter((e, i) => i > trendsSince)} />
+                <Trend data={data.INV} />
+              </TableCell>
+              <TableCell>
+                <IconButton onClick={() => handlePopup(data.INV)}>
+                  <ListAltOutlined />
+                </IconButton>
               </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Jobs Completed</TableCell>
-              <TableCell>{data.JOBOUT[day]}</TableCell>
-              <TableCell>{data.JOBOUT[day - 1]}</TableCell>
+              <TableCell>{dataForDay("JOBOUT", day)}</TableCell>
+              <TableCell>{dataForDay("JOBOUT", day - 1)}</TableCell>
               <TableCell>
-                <Trend data={data.JOBOUT.filter((e, i) => i > trendsSince)} />
+                <Trend data={data.JOBOUT} />
+              </TableCell>
+              <TableCell>
+                <IconButton onClick={() => handlePopup(data.JOBOUT)}>
+                  <ListAltOutlined />
+                </IconButton>
               </TableCell>
             </TableRow>
             <TableRow>
@@ -217,14 +274,19 @@ const Example: React.FC = () => {
               .map(([k, v]) => (
                 <TableRow key={k}>
                   <TableCell>{k}</TableCell>
-                  <TableCell>{v[day]}</TableCell>
-                  <TableCell>{v[day - 1]}</TableCell>
+                  <TableCell>{dataForDay(k as keyof Data, day)}</TableCell>
+                  <TableCell>{dataForDay(k as keyof Data, day - 1)}</TableCell>
                   <TableCell>
                     <Trend
                       data={(v as Array<number>).filter(
                         (e, i) => i > trendsSince
                       )}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handlePopup(v as Array<number>)}>
+                      <ListAltOutlined />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
