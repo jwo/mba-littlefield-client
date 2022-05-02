@@ -113,10 +113,12 @@ const Example: React.FC = () => {
   });
 
   const Trend: React.FC<{ data: Array<number> }> = ({ data }) => {
-    const d = data.map((r) => {
-      if (Number.isNaN(r)) return 0;
-      return Number(r);
-    });
+    const d = data
+      .map((r) => {
+        if (Number.isNaN(r)) return 0;
+        return Number(r);
+      })
+      .filter((e, i) => i >= trendsSince);
 
     return <RawTrend data={d} />;
   };
@@ -134,12 +136,14 @@ const Example: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {(popupData || []).map((v, i) => (
-                <TableRow key={i}>
-                  <TableCell>{i + 2 + trendsSince}</TableCell>
-                  <TableCell>{v}</TableCell>
-                </TableRow>
-              ))}
+              {(popupData || [])
+                .filter((e, i) => i >= trendsSince)
+                .map((v, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{i + 1 + trendsSince}</TableCell>
+                    <TableCell>{v}</TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </DialogContent>
@@ -277,11 +281,7 @@ const Example: React.FC = () => {
                   <TableCell>{dataForDay(k as keyof Data, day)}</TableCell>
                   <TableCell>{dataForDay(k as keyof Data, day - 1)}</TableCell>
                   <TableCell>
-                    <Trend
-                      data={(v as Array<number>).filter(
-                        (e, i) => i > trendsSince
-                      )}
-                    />
+                    <Trend data={v as Array<number>} />
                   </TableCell>
                   <TableCell>
                     <IconButton onClick={() => handlePopup(v as Array<number>)}>
